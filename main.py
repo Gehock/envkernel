@@ -1,6 +1,7 @@
 import sys
 
 from envkernel import envkernel, lmod, conda, virtualenv, docker, singularity
+from kubekernel import kubernetes
 
 def main(argv=sys.argv):
     modules: dict[str, envkernel] = {
@@ -8,6 +9,7 @@ def main(argv=sys.argv):
         "conda": conda,
         "virtualenv": virtualenv,
         "docker": docker,
+        "kubernetes": kubernetes,
         "singularity": singularity,
     }
 
