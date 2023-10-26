@@ -27,7 +27,7 @@ setuptools.setup(
     python_requires='>=3.5',
     entry_points={
         'console_scripts': [
-            'envkernel=envkernel:main',
+            'envkernel=main:main',
         ],
     },
     classifiers=[
