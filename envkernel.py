@@ -408,7 +408,7 @@ class docker(envkernel):
             *kernel['argv'],
         ]
         if 'display_name' not in kernel:
-            kernel['display_name'] = "Docker with {}".format(args.image),
+            kernel['display_name'] = "Docker with {}".format(args.image)
         self.install_kernel(kernel, name=self.name, user=self.user,
                             replace=self.replace, prefix=self.prefix)
 
@@ -634,6 +634,7 @@ def main(argv=sys.argv):
     if len(argv) > 2 and argv[2] == 'run':
         return cls(argv[3:]).run()
     else:
+        print(f"{cls=} {argv=}")
         cls(argv[2:]).setup()
         return 0
 
