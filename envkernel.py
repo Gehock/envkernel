@@ -611,32 +611,3 @@ class singularity(envkernel):
         ret = self.execvp(cmd[0], cmd)
         return(ret)
 
-
-
-def main(argv=sys.argv):
-    mod = argv[1]
-    if mod in {'-h', '--help'}:
-        all_mods = {name for (name, x) in globals().items()
-                    if isinstance(x, type) and issubclass(x, envkernel) and x!=envkernel}
-        print("envkernel must be called with the name of a module as the first argument.")
-        print("Currently help does not show mode-options for each module, please see the")
-        print("README.")
-        print("")
-        print("available modules:", *sorted(all_mods))
-        print("")
-        print("General usage: envkernel [envkernel-options] [mode-options]")
-        print("")
-        print("envkernel-options:")
-        print("")
-        envkernel(sys.argv).setup()
-        exit(0)
-    cls = globals()[mod]
-    if len(argv) > 2 and argv[2] == 'run':
-        return cls(argv[3:]).run()
-    else:
-        print(f"{cls=} {argv=}")
-        cls(argv[2:]).setup()
-        return 0
-
-if __name__ == '__main__':
-    exit(main())
