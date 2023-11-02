@@ -41,7 +41,6 @@ envkernel = "envkernel.main:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build]
-include = [
-  "data/**",
-]
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
+"data" = "envkernel/data"
