@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 
 import argparse
-import copy
-import glob
 import json
-import logging
 import os
 from os.path import join as pjoin
-import re
-import shlex
-import shutil
+from pprint import pformat
+# import re
+# import shlex
+# import shutil
 import subprocess
 import sys
-import tempfile
+import time
+# import tempfile
 
 import yaml
 
@@ -47,7 +46,9 @@ class kubernetes(envkernel):
         super().run()
         from kubernetes import client, config, utils
 
+        LOG.info(f"before split {self.argv=}")
         argv, rest = split_doubledash(self.argv, 1)
+        LOG.info(f"after split {self.argv=}")
         parser = argparse.ArgumentParser()
         parser.add_argument('image', help='Docker image name')
         #parser.add_argument('--mount', '-m', action='append', default=[],
@@ -59,7 +60,14 @@ class kubernetes(envkernel):
         # parser.add_argument('--workdir', help='Location to mount working dir inside the container')
         parser.add_argument('--connection-file', help="Do not use, internal use.")
 
-        args, unknown_args = parser.parse_known_args(argv)
+        args = parser.parse_args(argv)
+
+        pod_name = f"python-test-{os.getpid()}"
+        LOG.info(f"after parse {str(args)=}")
+        LOG.info(f"{str(rest)=}")
+        for i, arg in enumerate(rest):
+            if "{connection_file}" in arg:
+                rest[i] = arg.format(connection_file=args.connection_file)
 
         # extra_mounts = [ ]
 
@@ -80,14 +88,14 @@ class kubernetes(envkernel):
         connection_file = args.connection_file
         connection_data = json.load(open(connection_file))
         forward_cmd = [
-            "kubectl", "port-forward", "po/python-test",
+            "kubectl", "port-forward", f"po/{pod_name}",
         ]
         # Find all the (five) necessary ports
         for var in ('shell_port', 'iopub_port', 'stdin_port', 'control_port', 'hb_port'):
             # Forward each port to itself
             port = connection_data[var]
             #expose_ports.append((connection_data[var], connection_data[var]))
-            forward_cmd.append(port)
+            forward_cmd.append(str(port))
         # Mount the connection file inside the container
         # extra_mounts.extend(["--mount",
         #                      "type=bind,source={},destination={},ro={}".format(
@@ -98,34 +106,61 @@ class kubernetes(envkernel):
 
         # Change connection_file to bind to all IPs.
         connection_data['ip'] = '0.0.0.0'
-        open(connection_file, 'w').write(json.dumps(connection_data))
+        open(connection_file, 'w').write(json.dumps(connection_data, indent=2))
         filename = os.path.basename(connection_file)
+        file_path = os.path.dirname(connection_file)
 
         config.load_kube_config(
             config_file="/m/home/home4/42/laines5/unix/.kube/config.d/k8s-cs",
             context="k8s-cs/jupyter-test",
         )
-        yaml_file = "pod.yaml"
+        script_path = os.path.dirname(os.path.realpath(__file__))
+        yaml_file = f"{script_path}/pod.yaml"
         data = yaml.safe_load(open(yaml_file))
+        data["metadata"]["name"] = pod_name
         data["spec"]["securityContext"]["runAsUser"] = os.getuid()
         data["spec"]["securityContext"]["runAsGroup"] = os.getgid()
         data["spec"]["securityContext"]["fsGroup"] = os.getgid()
-
+        data["spec"]["containers"][0]["image"] = args.image
+        data["spec"]["containers"][0]["command"] = rest
+        data["spec"]["containers"][0]["volumeMounts"][0]["mountPath"] = file_path
+        data["spec"]["volumes"][0]["configMap"]["name"] = f"connection-file-{os.getpid()}"
+        data["spec"]["volumes"][0]["configMap"]["items"] = [
+            {
+                "key": filename,
+                "path": filename,
+            }
+        ]
 
 
         with client.ApiClient() as k8s_client:
+            api_instance = client.CoreV1Api(k8s_client)
             body = client.V1ConfigMap(
-                api_version="v1",
                 kind="ConfigMap",
                 metadata=client.V1ObjectMeta(
-                    name="connection-file",
+                    name=f"connection-file-{os.getpid()}",
                     namespace="jupyter-test",
                 ),
                 data={
-                    filename: connection_data,
+                    filename: open(connection_file).read(),
                 },
             )
-            api_instance = client.CoreV1Api(k8s_client)
+            # try:
+            #     api_instance.delete_namespaced_config_map(
+            #         name="connection-file",
+            #         namespace="jupyter-test",
+            #     )
+            # except client.exceptions.ApiException as e:
+            #     if e.status != 404:
+            #         raise
+            # try:
+            #     api_instance.delete_namespaced_pod(
+            #         name="python-test",
+            #         namespace="jupyter-test",
+            #     )
+            # except client.exceptions.ApiException as e:
+            #     if e.status != 404:
+            #         raise
             api_instance.create_namespaced_config_map(
                 namespace="jupyter-test",
                 body=body,
@@ -172,19 +207,43 @@ class kubernetes(envkernel):
 #       cmd.append(args.image)
 
         # Remainder of all other arguments from the kernel specification
-        cmd.extend([
-            *unknown_args,
-#           '--debug',
-            args.image,
-            *rest,
-            ])
+#         cmd.extend([
+#             *unknown_args,
+# #           '--debug',
+#             args.image,
+#             *rest,
+#             ])
 
         # Run...
-        LOG.info('kubernetes: running cmd = %s', printargs(cmd))
+        # ret = self.execvp(cmd[0], cmd)
+        LOG.info(f"kubernetes: creating from dict = {pformat(data)}")
+        utils.create_from_dict(
+            k8s_client, data, verbose=True, namespace="jupyter-test"
+        )
+
+        def _wait_for_container(name: str, timeout: int = 60):
+            with client.ApiClient() as k8s_client:
+                api_instance = client.CoreV1Api(k8s_client)
+                for _ in range(timeout):
+                    try:
+                        ret = api_instance.read_namespaced_pod_status(
+                            name=name,
+                            namespace="jupyter-test",
+                        )
+                        if ret.status.phase == 'Running':
+                            return
+                    except client.exceptions.ApiException as e:
+                        if e.status != 404:
+                            raise
+                    time.sleep(1)
+
+        _wait_for_container(pod_name)
+        LOG.info("kubernetes: container is running, waiting for a little more")
+        time.sleep(1)
+        LOG.info(f"kubernetes: forwarding ports cmd = {printargs(forward_cmd)}")
         subprocess.Popen(forward_cmd)
-        ret = self.execvp(cmd[0], cmd)
 
         # Clean up all temparary directories
         # for tmpdir in tmpdirs:
         #     tmpdir.cleanup()
-        return(ret)
+        # return(ret)

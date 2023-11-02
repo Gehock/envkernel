@@ -1,0 +1,42 @@
+---
+# This file is read by kubekernel.py and modified in-memory
+apiVersion: v1
+kind: Pod
+metadata:
+  name: python-test
+spec:
+  securityContext:
+    runAsUser: 1976442
+    runAsGroup: 70000
+    fsGroup: 70000
+  containers:
+    - name: kernel
+      image: harbor.cs.aalto.fi/jupyter/notebook-server:6.1.8
+      command:
+      - "python"
+      - "-m"
+      - "ipykernel_launcher"
+      - "-f"
+      - "/l/conda/envs/envkernel-test/share/jupyter/runtime/kernel-b56833f0-0236-4afa-b569-927c955a0ef9.json"
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "512Mi"
+        requests:
+          cpu: "0.25"
+          memory: "256Mi"
+      restartPolicy: Never
+      volumeMounts:
+        - name: config
+          mountPath: /l/conda/envs/envkernel-test/share/jupyter/runtime
+          readOnly: true
+  volumes:
+    # You set volumes at the Pod level, then mount them into containers inside that Pod
+    - name: config
+      configMap:
+        # Provide the name of the ConfigMap you want to mount.
+        name: connection-file
+        # An array of keys from the ConfigMap to create as files
+        items:
+          - key: "kernel-b56833f0-0236-4afa-b569-927c955a0ef9.json"
+            path: "kernel-b56833f0-0236-4afa-b569-927c955a0ef9.json"
