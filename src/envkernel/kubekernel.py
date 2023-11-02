@@ -126,7 +126,7 @@ class kubernetes(envkernel):
             )
 
         script_path = os.path.dirname(os.path.realpath(__file__))
-        yaml_file = f"{script_path}/pod.yaml"
+        yaml_file = f"{script_path}/data/pod.yaml"
         data = yaml.safe_load(open(yaml_file))
         data["metadata"]["name"] = pod_name
         data["spec"]["securityContext"]["runAsUser"] = os.getuid()
