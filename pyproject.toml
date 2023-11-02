@@ -21,6 +21,7 @@ classifiers = [
 
 dependencies = [
   "jupyter_client",
+  "PyYAML",
 ]
 
 [project.optional-dependencies]
