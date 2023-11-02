@@ -23,6 +23,7 @@ class kubernetes(envkernel):
         super().setup()
         parser = argparse.ArgumentParser()
         parser.add_argument('image')
+        parser.add_argument("--namespace", help="Kubernetes namespace")
         args, unknown_args = parser.parse_known_args(self.argv)
         LOG.debug('setup: %s', args)
 
@@ -33,6 +34,7 @@ class kubernetes(envkernel):
             'run',
             '--connection-file', '{connection_file}',
             args.image,
+            "--namespace", args.namespace,
             *unknown_args,
             '--',
             *kernel['argv'],
@@ -51,6 +53,7 @@ class kubernetes(envkernel):
         LOG.info(f"after split {self.argv=}")
         parser = argparse.ArgumentParser()
         parser.add_argument('image', help='Docker image name')
+        parser.add_argument("--namespace", help="Internal use")
         #parser.add_argument('--mount', '-m', action='append', default=[],
         #                        help='mount to set up, format hostDir:containerMountPoint')
         # parser.add_argument('--copy-workdir', default=False, action='store_true')
@@ -122,7 +125,7 @@ class kubernetes(envkernel):
         else:
             config.load_kube_config(
                 config_file="/m/home/home4/42/laines5/unix/.kube/config.d/k8s-cs",
-                context="k8s-cs/jupyter-test",
+                context=f"k8s-cs/{args.namespace}",
             )
 
         script_path = os.path.dirname(os.path.realpath(__file__))
@@ -150,7 +153,7 @@ class kubernetes(envkernel):
                 kind="ConfigMap",
                 metadata=client.V1ObjectMeta(
                     name=f"connection-file-{os.getpid()}",
-                    namespace="jupyter-test",
+                    namespace=args.namespace,
                 ),
                 data={
                     filename: open(connection_file).read(),
@@ -159,7 +162,7 @@ class kubernetes(envkernel):
             # try:
             #     api_instance.delete_namespaced_config_map(
             #         name="connection-file",
-            #         namespace="jupyter-test",
+            #         namespace=args.namespace,
             #     )
             # except client.exceptions.ApiException as e:
             #     if e.status != 404:
@@ -167,13 +170,13 @@ class kubernetes(envkernel):
             # try:
             #     api_instance.delete_namespaced_pod(
             #         name="python-test",
-            #         namespace="jupyter-test",
+            #         namespace=args.namespace,
             #     )
             # except client.exceptions.ApiException as e:
             #     if e.status != 404:
             #         raise
             api_instance.create_namespaced_config_map(
-                namespace="jupyter-test",
+                namespace=args.namespace,
                 body=body,
             )
 
@@ -229,7 +232,7 @@ class kubernetes(envkernel):
         # ret = self.execvp(cmd[0], cmd)
         LOG.info(f"kubernetes: creating from dict = {pformat(data)}")
         utils.create_from_dict(
-            k8s_client, data, verbose=True, namespace="jupyter-test"
+            k8s_client, data, verbose=True, namespace=args.namespace
         )
 
         def _wait_for_container(name: str, timeout: int = 60):
@@ -239,7 +242,7 @@ class kubernetes(envkernel):
                     try:
                         ret = api_instance.read_namespaced_pod_status(
                             name=name,
-                            namespace="jupyter-test",
+                            namespace=args.namespace,
                         )
                         if ret.status.phase == 'Running':
                             return
