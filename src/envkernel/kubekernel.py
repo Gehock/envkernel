@@ -108,11 +108,11 @@ class kubernetes(envkernel):
         #expose_mounts.append(dict(src=json_file, dst=json_file))
 
         # Change connection_file to bind to all IPs.
-        connection_data['ip'] = '0.0.0.0'
-        open(connection_file, 'w').write(json.dumps(connection_data, indent=2))
+        connection_data["ip"] = pod_name
+        connection_json_local = json.dumps(connection_data, indent=2)
+        open(connection_file, 'w').write(connection_json_local)
         filename = os.path.basename(connection_file)
         file_path = os.path.dirname(connection_file)
-
 
         if os.path.exists('/run/secrets/kubernetes.io/serviceaccount/token'):
             config.load_incluster_config()
@@ -146,6 +146,8 @@ class kubernetes(envkernel):
             }
         ]
 
+        connection_data["ip"] = "0.0.0.0"
+        connection_json_configmap = json.dumps(connection_data, indent=2)
 
         with client.ApiClient() as k8s_client:
             api_instance = client.CoreV1Api(k8s_client)
@@ -156,7 +158,7 @@ class kubernetes(envkernel):
                     namespace=args.namespace,
                 ),
                 data={
-                    filename: open(connection_file).read(),
+                    filename: connection_json_configmap,
                 },
             )
             # try:
@@ -253,9 +255,9 @@ class kubernetes(envkernel):
 
         _wait_for_container(pod_name)
         LOG.info("kubernetes: container is running, waiting for a little more")
-        time.sleep(1)
-        LOG.info(f"kubernetes: forwarding ports cmd = {printargs(forward_cmd)}")
-        subprocess.Popen(forward_cmd)
+        # time.sleep(1)
+        # LOG.info(f"kubernetes: forwarding ports cmd = {printargs(forward_cmd)}")
+        # subprocess.Popen(forward_cmd)
 
         # Clean up all temparary directories
         # for tmpdir in tmpdirs:
