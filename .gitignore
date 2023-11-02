@@ -6,3 +6,4 @@ Untitled*.ipynb
 /envkernel.egg-info/
 __pycache__/
 .cache
+*.egg-info
