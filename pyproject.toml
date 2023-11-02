@@ -22,6 +22,7 @@ classifiers = [
 dependencies = [
   "jupyter_client",
   "PyYAML",
+  "kubernetes",
 ]
 
 [project.optional-dependencies]
