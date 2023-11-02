@@ -1,0 +1,40 @@
+[project]
+name = "envkernel"
+version = "1.1.0"
+authors = [
+  { name="Richard Darst", email="rkd@zgib.net" },
+]
+description = "Jupyter kernels manipulation and in other environments (docker, Lmod, etc.)"
+readme = "README.md"
+requires-python = ">=3.5"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Development Status :: 4 - Beta",
+  "Framework :: Jupyter",
+  "Environment :: Console",
+  "Intended Audience :: System Administrators",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+]
+
+dependencies = [
+  "jupyter_client",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "ipykernel",
+]
+
+[project.scripts]
+envkernel = "envkernel.main:main"
+
+[project.urls]
+"Homepage" = "https://github.com/NordicHPC/envkernel"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

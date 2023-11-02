@@ -15,7 +15,7 @@ import time
 
 import yaml
 
-from envkernel import envkernel, LOG, split_doubledash, printargs
+from envkernel.envkernel import envkernel, LOG, split_doubledash, printargs
 
 
 class kubernetes(envkernel):
