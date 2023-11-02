@@ -110,10 +110,11 @@ class kubernetes(envkernel):
         filename = os.path.basename(connection_file)
         file_path = os.path.dirname(connection_file)
 
-        config.load_kube_config(
-            config_file="/m/home/home4/42/laines5/unix/.kube/config.d/k8s-cs",
-            context="k8s-cs/jupyter-test",
-        )
+        # config.load_kube_config(
+        #     config_file="/m/home/home4/42/laines5/unix/.kube/config.d/k8s-cs",
+        #     context="k8s-cs/jupyter-test",
+        # )
+        config.load_kube_config()
         script_path = os.path.dirname(os.path.realpath(__file__))
         yaml_file = f"{script_path}/pod.yaml"
         data = yaml.safe_load(open(yaml_file))
