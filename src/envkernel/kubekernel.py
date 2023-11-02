@@ -110,11 +110,21 @@ class kubernetes(envkernel):
         filename = os.path.basename(connection_file)
         file_path = os.path.dirname(connection_file)
 
-        # config.load_kube_config(
-        #     config_file="/m/home/home4/42/laines5/unix/.kube/config.d/k8s-cs",
-        #     context="k8s-cs/jupyter-test",
-        # )
-        config.load_kube_config()
+
+        if os.path.exists('/run/secrets/kubernetes.io/serviceaccount/token'):
+            config.load_incluster_config()
+            # f = open('/run/secrets/kubernetes.io/serviceaccount/token')
+            # kube_auth_token = f.read()
+            # kube_config = kubernetes.client.Configuration()
+            # kube_config.api_key['authorization'] = 'Bearer ' + kube_auth_token
+            # kube_config.host = os.environ['KUBERNETES_PORT'].replace('tcp://', 'https://', 1)
+            # kube_config.ssl_ca_cert = '/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+        else:
+            config.load_kube_config(
+                config_file="/m/home/home4/42/laines5/unix/.kube/config.d/k8s-cs",
+                context="k8s-cs/jupyter-test",
+            )
+
         script_path = os.path.dirname(os.path.realpath(__file__))
         yaml_file = f"{script_path}/pod.yaml"
         data = yaml.safe_load(open(yaml_file))
