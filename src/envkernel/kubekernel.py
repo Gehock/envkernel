@@ -93,21 +93,8 @@ class kubernetes(envkernel):
         forward_cmd = [
             "kubectl", "port-forward", f"po/{pod_name}",
         ]
-        # Find all the (five) necessary ports
-        for var in ('shell_port', 'iopub_port', 'stdin_port', 'control_port', 'hb_port'):
-            # Forward each port to itself
-            port = connection_data[var]
-            #expose_ports.append((connection_data[var], connection_data[var]))
-            forward_cmd.append(str(port))
-        # Mount the connection file inside the container
-        # extra_mounts.extend(["--mount",
-        #                      "type=bind,source={},destination={},ro={}".format(
-        #                          connection_file, connection_file, 'false'
-        #                                                                       )
-        #                     ])
-        #expose_mounts.append(dict(src=json_file, dst=json_file))
 
-        # Change connection_file to bind to all IPs.
+        # Change the local connection_file to connect to the service.
         connection_data["ip"] = pod_name
         connection_json_local = json.dumps(connection_data, indent=2)
         open(connection_file, 'w').write(connection_json_local)
@@ -124,28 +111,12 @@ class kubernetes(envkernel):
             # kube_config.ssl_ca_cert = '/run/secrets/kubernetes.io/serviceaccount/ca.crt'
         else:
             config.load_kube_config(
-                config_file="/m/home/home4/42/laines5/unix/.kube/config.d/k8s-cs",
-                context=f"k8s-cs/{args.namespace}",
+                config_file="/m/home/home4/42/laines5/unix/.kube/config.d/minikube",
+                # context=f"k8s-cs/{args.namespace}",
+                context=f"minikube",
             )
 
-        script_path = os.path.dirname(os.path.realpath(__file__))
-        yaml_file = f"{script_path}/data/pod.yaml"
-        data = yaml.safe_load(open(yaml_file))
-        data["metadata"]["name"] = pod_name
-        data["spec"]["securityContext"]["runAsUser"] = os.getuid()
-        data["spec"]["securityContext"]["runAsGroup"] = os.getgid()
-        data["spec"]["securityContext"]["fsGroup"] = os.getgid()
-        data["spec"]["containers"][0]["image"] = args.image
-        data["spec"]["containers"][0]["command"] = rest
-        data["spec"]["containers"][0]["volumeMounts"][0]["mountPath"] = file_path
-        data["spec"]["volumes"][0]["configMap"]["name"] = f"connection-file-{os.getpid()}"
-        data["spec"]["volumes"][0]["configMap"]["items"] = [
-            {
-                "key": filename,
-                "path": filename,
-            }
-        ]
-
+        # Change remote connection_file to bind to all IPs.
         connection_data["ip"] = "0.0.0.0"
         connection_json_configmap = json.dumps(connection_data, indent=2)
 
@@ -232,7 +203,47 @@ class kubernetes(envkernel):
 
         # Run...
         # ret = self.execvp(cmd[0], cmd)
-        LOG.info(f"kubernetes: creating from dict = {pformat(data)}")
+
+        script_path = os.path.dirname(os.path.realpath(__file__))
+        yaml_file = f"{script_path}/data/pod.yaml"
+        data = yaml.safe_load(open(yaml_file))
+        data["metadata"]["name"] = pod_name
+        data["spec"]["securityContext"]["runAsUser"] = os.getuid()
+        data["spec"]["securityContext"]["runAsGroup"] = os.getgid()
+        data["spec"]["securityContext"]["fsGroup"] = os.getgid()
+        data["spec"]["containers"][0]["image"] = args.image
+        data["spec"]["containers"][0]["command"] = rest
+        data["spec"]["containers"][0]["volumeMounts"][0]["mountPath"] = file_path
+        data["spec"]["volumes"][0]["configMap"]["name"] = f"connection-file-{os.getpid()}"
+        data["spec"]["volumes"][0]["configMap"]["items"] = [
+            {
+                "key": filename,
+                "path": filename,
+            }
+        ]
+        LOG.info(f"kubernetes: creating pod from dict = {pformat(data)}")
+        utils.create_from_dict(
+            k8s_client, data, verbose=True, namespace=args.namespace
+        )
+
+        yaml_file = f"{script_path}/data/service.yaml"
+        data = yaml.safe_load(open(yaml_file))
+        data["metadata"]["name"] = pod_name
+        data["spec"]["selector"]["app"] = pod_name
+        data["spec"]["ports"] = []
+
+        # Find all the (five) necessary ports
+        for var in ('shell_port', 'iopub_port', 'stdin_port', 'control_port', 'hb_port'):
+            # Forward each port to itself
+            port = connection_data[var]
+            var = var.replace('_port', '')
+            data["spec"]["ports"].append({
+                "name": var,
+                "port": port,
+                "targetPort": port,
+            })
+
+        LOG.info(f"kubernetes: creating service from dict = {pformat(data)}")
         utils.create_from_dict(
             k8s_client, data, verbose=True, namespace=args.namespace
         )
