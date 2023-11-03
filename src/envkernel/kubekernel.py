@@ -207,7 +207,9 @@ class kubernetes(envkernel):
         script_path = os.path.dirname(os.path.realpath(__file__))
         yaml_file = f"{script_path}/data/pod.yaml"
         data = yaml.safe_load(open(yaml_file))
+        # TODO: load as a template instead
         data["metadata"]["name"] = pod_name
+        data["metadata"]["labels"]["app"] = pod_name
         data["spec"]["securityContext"]["runAsUser"] = os.getuid()
         data["spec"]["securityContext"]["runAsGroup"] = os.getgid()
         data["spec"]["securityContext"]["fsGroup"] = os.getgid()
