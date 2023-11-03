@@ -23,7 +23,11 @@ class kubernetes(envkernel):
         super().setup()
         parser = argparse.ArgumentParser()
         parser.add_argument('image')
-        parser.add_argument("--namespace", help="Kubernetes namespace")
+        parser.add_argument(
+            "--namespace",
+            help="Kubernetes namespace",
+            required=True
+        )
         args, unknown_args = parser.parse_known_args(self.argv)
         LOG.debug('setup: %s', args)
 
@@ -53,7 +57,7 @@ class kubernetes(envkernel):
         LOG.info(f"after split {self.argv=}")
         parser = argparse.ArgumentParser()
         parser.add_argument('image', help='Docker image name')
-        parser.add_argument("--namespace", help="Internal use")
+        parser.add_argument("--namespace", help="Internal use", required=True)
         #parser.add_argument('--mount', '-m', action='append', default=[],
         #                        help='mount to set up, format hostDir:containerMountPoint')
         # parser.add_argument('--copy-workdir', default=False, action='store_true')
