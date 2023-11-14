@@ -50,7 +50,7 @@ KNOWN_KERNELS = {
     }
 
 
-def split_doubledash(argv, maxsplit=None):
+def split_doubledash(argv: list[str], maxsplit=None) -> list[list[str]]:
     """Split on '--', for spearating arguments"""
     new = [ ]
     last = 0
@@ -91,7 +91,7 @@ def printargs(args):
 
 class envkernel():
     execvp = staticmethod(os.execvp)
-    def __init__(self, argv):
+    def __init__(self, argv: list[str]):
         LOG.debug('envkernel: cli args: %s', argv)
         self.argv = argv
     def setup(self):
