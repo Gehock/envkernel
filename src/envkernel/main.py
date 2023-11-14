@@ -2,6 +2,7 @@ import sys
 
 from envkernel.envkernel import envkernel, lmod, conda, virtualenv, docker, singularity
 from envkernel.kubekernel import kubernetes
+from envkernel.dummy import dummy
 
 def main(argv=sys.argv):
     modules: dict[str, envkernel] = {
@@ -11,6 +12,7 @@ def main(argv=sys.argv):
         "docker": docker,
         "kubernetes": kubernetes,
         "singularity": singularity,
+        "dummy": dummy,
     }
 
     if len(argv) <= 1 or argv[1] in {'-h', '--help'}:
